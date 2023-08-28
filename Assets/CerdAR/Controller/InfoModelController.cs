@@ -14,6 +14,7 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
 
     Camera m_CameraManager;
     public TextMesh distanceText;
+#nullable enable
     public TextMesh? description;
 
     void Start()
@@ -121,8 +122,8 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
     }
     public Vector3 ConvertGPS2ARCoordinate(Feature ft)
     {
-        double dz = (ft.geometry.coordinates[1] - GlobalAR.userLat) * GlobalAR.lat2km;   // -z‚ª“ì•ûŒü
-        double dx = -(ft.geometry.coordinates[0] - GlobalAR.userLng) * GlobalAR.lat2km; // +x‚ª“Œ•ûŒü
+        double dz = (ft.geometry.coordinates[1] - GlobalAR.userLat) * GlobalAR.lat2km;   // -z????????
+        double dx = -(ft.geometry.coordinates[0] - GlobalAR.userLng) * GlobalAR.lat2km; // +x????????
         return new Vector3((float)dx, 0, (float)dz);
     }
 
@@ -162,7 +163,7 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
     }
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log("‚·‚è”²‚¯‚½I");
+        Debug.Log("???????????I");
     }
 
 }

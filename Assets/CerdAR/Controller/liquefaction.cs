@@ -12,7 +12,6 @@ public class liquefaction : MonoBehaviour
     ARCameraManager m_CameraManager;
     ARPlaneManager m_ARPlaneManager;
     bool flag = false;
-    float adjust = 0.0f;
     // Start is called before the first frame update
     void Start()
     {

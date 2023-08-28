@@ -2,7 +2,26 @@
 using System.Collections.Generic;
 namespace JSONModel
 {
-    // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse); 
+    public class Geometry
+    {
+        public string type { get; set; }
+        public List<double> coordinates { get; set; }
+    }
+
+    public class Feature
+    {
+        public string type { get; set; }
+        public Properties properties { get; set; }
+        public Geometry geometry { get; set; }
+        public string id { get; set; }
+    }
+
+    public class Root
+    {
+        public string type { get; set; }
+        public List<Feature> features { get; set; }
+    }
+#nullable enable
     public class Properties
     {
         public string? icon { get; set; }
@@ -23,25 +42,6 @@ namespace JSONModel
         public double? water_level { get; set; }
     }
 
-    public class Geometry
-    {
-        public string type { get; set; }
-        public List<double> coordinates { get; set; }
-    }
-
-    public class Feature
-    {
-        public string type { get; set; }
-        public Properties properties { get; set; }
-        public Geometry geometry { get; set; }
-        public string id { get; set; }
-    }
-
-    public class Root
-    {
-        public string type { get; set; }
-        public List<Feature> features { get; set; }
-    }
 
 
 }

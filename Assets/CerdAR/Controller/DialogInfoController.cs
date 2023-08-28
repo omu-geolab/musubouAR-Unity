@@ -97,7 +97,7 @@ public class DialogInfoController : MonoBehaviour
         }
         
 
-        distance.text ="あと"+ dis.ToString("F0") + "m";
+        distance.text ="??"+ dis.ToString("F0") + "m";
         content.text = feature.properties.description;
         GlobalAR.isShowedDialog = false;
     }
@@ -116,22 +116,19 @@ public class DialogInfoController : MonoBehaviour
        
     }
     public string URI = "https://www.cerd.osaka-cu.ac.jp/cerd-web/wp-content/themes/cerd/img/share/logo.png";
+
     IEnumerator StartDowload()
     {
         UnityWebRequest www = UnityWebRequestTexture.GetTexture(URI);
 
-        //画像を取得できるまで待つ
         yield return www.SendWebRequest();
-
-        if (www.isNetworkError || www.isHttpError)
+        if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
         {
             Debug.Log(www.error);
         }
         else
         {
-            //取得した画像のテクスチャをRawImageのテクスチャに張り付ける
             image.texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
-            //image.SetMaterialDirty();
         }
     }
 }

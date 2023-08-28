@@ -8,7 +8,6 @@ public class WarnAnimationController : MonoBehaviour
     // Start is called before the first frame update
     public string warnID = "";
     private float waitTime = 5.0f;
-    private float waitTimeHouse = 20.0f;
     private float timer = 0.0f;
     ARCameraManager m_CameraManager;
     void Start()

@@ -9,8 +9,8 @@ public class DataManager
                                              // 定数
     string kInfo = "info"; // 種別(情報)
     string kWarn = "warn"; // 種別(警告(今災害が起こっている))
-    string kPhoto = "photo"; // 写真
-    string kMovie = "movie"; // 動画
+    //string kPhoto = "photo"; // 写真
+    //string kMovie = "movie"; // 動画
     public bool hasData = false;
 
     public void storeData(Root root)

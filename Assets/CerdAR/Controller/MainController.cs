@@ -2,18 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
-using Defective.JSON;
 using JSONModel;
 using Newtonsoft.Json;
 using System.Device.Location;
 using UnityEngine.XR.ARFoundation;
-using System.IO;
 using UnityEngine.UI;
 using UnityEngine.XR.ARSubsystems;
 using UnityEngine.XR.ARKit;
-#if UNITY_IOS && !UNITY_EDITOR
-using UnityEngine.XR.ARKit;
-#endif // UNITY_IOS && !UNITY_EDITOR
+using System.IO;
 
 public class MainController : MonoBehaviour
 {
@@ -126,7 +122,9 @@ public class MainController : MonoBehaviour
         }
         if (!GlobalAR.isWorldLoad) return;
 
-        if (Time.frameCount % 30 != 0 || !GlobalAR.dataManager.hasData) { return; }
+        //if (Time.frameCount % 30 != 0 || !GlobalAR.dataManager.hasData) { return; }
+        if (Time.frameCount % 30 != 0) { return; }
+
         if (firstRun)
         {
             firstRun = false;
