@@ -557,7 +557,8 @@ public class MainController : MonoBehaviour
 
     IEnumerator GetText()
     {
-        var url = "https://www.cerd.osaka-cu.ac.jp/cerdar_pics/Sugimoto/data.geojson";
+        //var url = "https://www.cerd.osaka-cu.ac.jp/cerdar_pics/Sugimoto/data.geojson";
+        var url = "https://www.musubou.net/musubou-ar/data.geojson";
         UnityWebRequest www = UnityWebRequest.Get(url);
         yield return www.SendWebRequest();
 
