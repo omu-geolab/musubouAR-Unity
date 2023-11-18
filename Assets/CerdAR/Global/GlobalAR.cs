@@ -15,8 +15,8 @@ public static class GlobalAR
     public static double lat2km = 111319.491;
     public static float heading = -67;
     public static float heightAR = 0;
-    public static double disCam = 100;
-    public static double kNearMsg = 50;
+    public static double disCam = 20;
+    public static double kNearMsg = 5;
     public static float noticeUpdateTime = 4;
     public static  GeoCoordinate currentlocation = new GeoCoordinate(34.71470599836312, 135.46561131809713);
     public static GeoCoordinate prelocation = new GeoCoordinate(0, 0);

@@ -67,7 +67,7 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
                 }
                 else
                 {
-                    if (distance < 50)
+                    if (distance < 5) // ARモードでのメッセージの表示範囲（m）
                     {
                         if (!GlobalAR.nearWarn.Contains(feature))
                         {

@@ -97,7 +97,7 @@ public class DialogInfoController : MonoBehaviour
         }
         
 
-        distance.text ="??"+ dis.ToString("F0") + "m";
+        distance.text =""+ dis.ToString("F0") + "m";
         content.text = feature.properties.description;
         GlobalAR.isShowedDialog = false;
     }
