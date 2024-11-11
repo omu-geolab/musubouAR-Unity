@@ -63,7 +63,6 @@ public class MainController : MonoBehaviour
             //var textResource = Resources.Load<TextAsset>("data");
             //text = textResource.text;
         }
-
         if (string.IsNullOrEmpty(text))
         {
             Debug.Log("download");
@@ -557,8 +556,7 @@ public class MainController : MonoBehaviour
 
     IEnumerator GetText()
     {
-        //var url = "https://www.cerd.osaka-cu.ac.jp/cerdar_pics/Sugimoto/data.geojson";
-        var url = "https://www.musubou.net/musubou-ar/data.geojson";
+        var url = GetDisasterLink();
         UnityWebRequest www = UnityWebRequest.Get(url);
         yield return www.SendWebRequest();
 
@@ -578,6 +576,34 @@ public class MainController : MonoBehaviour
         }
     }
 
+    public string GetDisasterLink()
+    {
+        string jsonFilePath = Path.Combine(Application.persistentDataPath, "disaster.json");
+
+        if (File.Exists(jsonFilePath))
+        {
+            try
+            {
+                string jsonContent = File.ReadAllText(jsonFilePath);
+
+                // JSON データを JSONData クラスにデシリアライズする
+                Disaster jsonData = JsonUtility.FromJson<Disaster>(jsonContent);
+                string disasterLink = jsonData.disaster_link;
+                Debug.Log(disasterLink);
+                return disasterLink;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("JSON ファイルの読み込み中にエラーが発生しました: " + e.Message);
+            }
+        }
+        else
+        {
+            Debug.LogError("JSON ファイルが見つかりません。");
+        }
+
+        return ""; // エラーが発生した場合、またはファイルが存在しない場合は "" を返す
+    }
     void Info3DView(List<JSONModel.Feature> arrF)
     {
         foreach (JSONModel.Feature f in arrF)

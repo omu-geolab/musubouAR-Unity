@@ -67,7 +67,7 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
                 }
                 else
                 {
-                    if (distance < 50)
+                    if (distance < 5)
                     {
                         if (!GlobalAR.nearWarn.Contains(feature))
                         {
