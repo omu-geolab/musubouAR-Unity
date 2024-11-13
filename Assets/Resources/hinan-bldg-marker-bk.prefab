@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1174356367911732754}
   - component: {fileID: 3110328859238042010}
   m_Layer: 0
-  m_Name: hinan-bldg-marker
+  m_Name: hinan-bldg-marker-bk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -30,7 +30,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1536608911712914643}
-  - {fileID: 105701941348471584}
+  - {fileID: 4069736798822649110}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -156,93 +156,93 @@ TextMesh:
   m_Color:
     serializedVersion: 2
     rgba: 4294967295
---- !u!1001 &503627068221191371
+--- !u!1001 &4607223595214940925
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     m_TransformParent: {fileID: 7390927615041149114}
     m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_RootOrder
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalScale.x
-      value: 280
+      value: 3
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalScale.y
-      value: 280
+      value: 3
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalScale.z
-      value: 280
+      value: 3
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalPosition.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalPosition.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: 0.00000006717943
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalRotation.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: f66587bc8ab8c45069208e1b07e6de2d,
+    - target: {fileID: 919132149155446097, guid: 4e102d31591fd9340b6cbf75b33e0034,
         type: 3}
       propertyPath: m_Name
-      value: bicycleMozuyan
+      value: hinan-bldg-marker
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: f66587bc8ab8c45069208e1b07e6de2d, type: 3}
---- !u!4 &105701941348471584 stripped
+  m_SourcePrefab: {fileID: 100100000, guid: 4e102d31591fd9340b6cbf75b33e0034, type: 3}
+--- !u!4 &4069736798822649110 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: f66587bc8ab8c45069208e1b07e6de2d,
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4e102d31591fd9340b6cbf75b33e0034,
     type: 3}
-  m_PrefabInstance: {fileID: 503627068221191371}
+  m_PrefabInstance: {fileID: 4607223595214940925}
   m_PrefabAsset: {fileID: 0}
