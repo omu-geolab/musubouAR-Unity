@@ -97,7 +97,7 @@ public class DialogInfoController : MonoBehaviour
         }
         
 
-        distance.text ="??"+ dis.ToString("F0") + "m";
+        distance.text ="距離： "+ dis.ToString("F0") + "m";
         content.text = feature.properties.description;
         GlobalAR.isShowedDialog = false;
     }
@@ -115,7 +115,7 @@ public class DialogInfoController : MonoBehaviour
         }
        
     }
-    public string URI = "https://www.cerd.osaka-cu.ac.jp/cerd-web/wp-content/themes/cerd/img/share/logo.png";
+    public string URI = "https://www.musubou.net/musubou-ar/AR_logo.jpg/AR_logo.jpg";
 
     IEnumerator StartDowload()
     {
