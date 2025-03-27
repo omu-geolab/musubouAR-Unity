@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.4465785, g: 0.49641246, b: 0.57481706, a: 1}
+  m_IndirectSpecularColor: {r: 0.44407508, g: 0.49331123, b: 0.57240987, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1599,8 +1599,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dialogInfo: {fileID: 1157314695}
   notice: {fileID: 897518011}
-  WaterAction: {fileID: 1098473962}
-  LiqueAction: {fileID: 468839756}
+  waterAction: {fileID: 1098473962}
+  liqueAction: {fileID: 468839756}
   occlusionManager: {fileID: 2127115564}
   meshManager: {fileID: 341047657}
   nonePrefab: {fileID: 6427989023023856471, guid: fedb7292b0fca45fb8cd1185135b9511,
@@ -6427,7 +6427,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1298551111
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9379,6 +9379,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1091901806}
     m_Modifications:
+    - target: {fileID: 530676836415968234, guid: 65f88e13e8f793942b2fdfe719970454,
+        type: 3}
+      propertyPath: m_Texture
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 1085434442559011401, guid: 65f88e13e8f793942b2fdfe719970454,
         type: 3}
       propertyPath: m_SizeDelta.x
@@ -9441,6 +9446,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6340471337368810964, guid: 65f88e13e8f793942b2fdfe719970454,
         type: 3}
+      propertyPath: m_Transition
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6340471337368810964, guid: 65f88e13e8f793942b2fdfe719970454,
+        type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
@@ -9474,6 +9484,12 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
+    - target: {fileID: 6340471337368810967, guid: 65f88e13e8f793942b2fdfe719970454,
+        type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 1b2fc6ed4c01f0149b05a1da1de7003f,
+        type: 3}
     - target: {fileID: 6340471337438767733, guid: 65f88e13e8f793942b2fdfe719970454,
         type: 3}
       propertyPath: m_StaticEditorFlags
@@ -9619,6 +9635,12 @@ PrefabInstance:
       propertyPath: m_StaticEditorFlags
       value: 4294967295
       objectReference: {fileID: 0}
+    - target: {fileID: 6340471338276240519, guid: 65f88e13e8f793942b2fdfe719970454,
+        type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 1b2fc6ed4c01f0149b05a1da1de7003f,
+        type: 3}
     - target: {fileID: 6340471338519070915, guid: 65f88e13e8f793942b2fdfe719970454,
         type: 3}
       propertyPath: m_StaticEditorFlags
@@ -11579,8 +11601,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dialogInfo: {fileID: 1157314695}
   notice: {fileID: 0}
-  WaterAction: {fileID: 1098473962}
-  LiqueAction: {fileID: 0}
+  waterAction: {fileID: 0}
+  liqueAction: {fileID: 0}
   occlusionManager: {fileID: 2127115564}
   meshManager: {fileID: 0}
   nonePrefab: {fileID: 0}

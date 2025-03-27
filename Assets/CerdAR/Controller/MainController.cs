@@ -11,859 +11,390 @@ using UnityEngine.XR.ARSubsystems;
 using UnityEngine.XR.ARKit;
 using System.IO;
 
+/// <summary>
+/// Main controller for the AR application
+/// Refactored for better organization, performance, and maintainability
+/// </summary>
 public class MainController : MonoBehaviour
 {
-    // Start is called before the first frame update
-    bool firstRun = true;
+    [Header("UI References")]
     public GameObject dialogInfo;
     public GameObject notice;
-    public GameObject WaterAction;
-    public GameObject LiqueAction;
+
+    [Header("Disaster Effects")]
+    public GameObject waterAction;
+    public GameObject liqueAction;
+
+    [Header("AR Components")]
     public AROcclusionManager occlusionManager;
-    List<string> noticeMsg = new List<string>();
-    List<string> planeAddFire = new List<string>();
-    List<string> planeAddBlock = new List<string>();
-    List<string> planeLiqueBlock = new List<string>();
-    bool isHill = false;
-    bool isHouse = false;
-    bool isFire = false;
-    bool isWater = false;
-    bool isWall = false;
-    bool isLique = false;
-    ARPlaneManager m_ARPlaneManager;
-    ARCameraManager m_CameraManager;
-    ARSessionOrigin m_ARSessionOrigin;
-    ARSession m_ARSession;
     public ARMeshManager meshManager;
     public MeshFilter nonePrefab;
     public MeshFilter occPrefab;
+
+    [Header("Audio")]
     public AudioSource houseAudio;
     public AudioSource rockFallAudio;
 
-    RaycastHit _hit;
+    // Private references to AR components
+    private ARPlaneManager arPlaneManager;
+    private ARCameraManager arCameraManager;
+    private ARSessionOrigin arSessionOrigin;
+    private ARSession arSession;
 
-    void Start()
-    {
-        Debug.Log("start");
-        dialogInfo.SetActive(false);
-        notice.SetActive(false);
-        occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Disabled;
-        meshManager.meshPrefab = nonePrefab;
-        string text = "";
-        string path = Path.Combine(Application.persistentDataPath, "data.geojson");
-        Debug.Log(path);
-        if (File.Exists(path))
-        {
-            Debug.Log("path");
-            text = File.ReadAllText(path);
-        }
-        else
-        {
-            //Debug.Log("data");
-            //var textResource = Resources.Load<TextAsset>("data");
-            //text = textResource.text;
-        }
-        if (string.IsNullOrEmpty(text))
-        {
-            Debug.Log("download");
-            StartCoroutine(GetText());
-        }
-        else
-        {
-            var myObject = JsonConvert.DeserializeObject<Root>(text);
-            GlobalAR.dataManager.storeData(myObject);
-        }
+    // Resource managers
+    private DisasterEffectsManager disasterEffects;
+    private UIManager uiManager;
+    private ResourceManager resourceManager;
 
-        InvokeRepeating("updateNotice", 0.1f, 3f);
-    }
-    void Awake()
+    // State tracking
+    private bool isFirstRun = true;
+    private float noticeUpdateInterval = 3f;
+
+    // Initialization
+    private void Awake()
     {
-        m_ARPlaneManager = FindObjectOfType<ARPlaneManager>();
-        m_CameraManager = FindObjectOfType<ARCameraManager>();
-        m_ARSessionOrigin = FindObjectOfType<ARSessionOrigin>();
-        m_ARSession = FindObjectOfType<ARSession>();
+        // Get AR components references
+        arPlaneManager = FindObjectOfType<ARPlaneManager>();
+        arCameraManager = FindObjectOfType<ARCameraManager>();
+        arSessionOrigin = FindObjectOfType<ARSessionOrigin>();
+        arSession = FindObjectOfType<ARSession>();
+
+        // Initialize managers
+        resourceManager = new ResourceManager();
+        uiManager = new UIManager(dialogInfo, notice);
+        disasterEffects = new DisasterEffectsManager(
+            arPlaneManager,
+            arCameraManager,
+            occlusionManager,
+            meshManager,
+            nonePrefab,
+            occPrefab,
+            waterAction,
+            liqueAction,
+            houseAudio,
+            rockFallAudio
+        );
     }
+
+    private void Start()
+    {
+        Debug.Log("Starting application");
+        InitializeUI();
+        LoadGeoData();
+        InvokeRepeating(nameof(UpdateNotice), 0.1f, noticeUpdateInterval);
+    }
+
     private void OnEnable()
     {
-        resetAR();
+        ResetAR();
         GlobalAR.currentWarn = "";
     }
 
-    // Update is called once per frame
-    void Update()
+    private void InitializeUI()
     {
-        
-        if (Input.touchCount > 0)
+        uiManager.HideAll();
+        occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Disabled;
+        meshManager.meshPrefab = nonePrefab;
+    }
+
+    private void LoadGeoData()
+    {
+        string filePath = Path.Combine(Application.persistentDataPath, "data.geojson");
+        Debug.Log($"Checking for data at: {filePath}");
+
+        if (File.Exists(filePath))
         {
-            Touch touch = Input.touches[0];
-            if (touch.phase == TouchPhase.Began)
-            {
-                var _ray = m_ARSessionOrigin.camera.ScreenPointToRay(touch.position);
-                RaycastHit[] hit = Physics.RaycastAll(_ray);
-
-                for (int i = 0; i < hit.Length; i++)
-                {
-                    if (hit[i].collider != null)
-                    {
-                        var tapObject = hit[i].transform.gameObject;
-
-                        InfoModelController info = tapObject.GetComponent("InfoModelController") as InfoModelController;
-                        if (info != null)
-                        {
-                            GlobalAR.currentFeature = info.feature;
-                            GlobalAR.isViewDialog = true;
-                        }
-
-                        Debug.Log(hit[i].transform.name);
-                    }
-                }
-            }
-        }
-        if (!GlobalAR.isWorldLoad) return;
-
-        //if (Time.frameCount % 30 != 0 || !GlobalAR.dataManager.hasData) { return; }
-        if (Time.frameCount % 30 != 0) { return; }
-
-        if (firstRun)
-        {
-            firstRun = false;
-            Info3DView(GlobalAR.dataManager.infoBox);
-            Info3DView(GlobalAR.dataManager.warnBox);
-
-
-        }
-        update3DView(GlobalAR.outsideAR);
-        if (GlobalAR.isViewDialog && !GlobalAR.isShowedDialog)
-        {
-            dialogInfo.SetActive(true);
-
-        }
-
-        if (GlobalAR.insideWarn.Count > 0 && GlobalAR.demoMode == GlobalAR.AnimationMode.None)
-        {
-
-            var feature = GlobalAR.insideWarn[0];
-
-            Debug.Log(feature.properties.risk_type);
-            if (feature.properties.risk_type == 0)
-            {
-
-                if (!isFire)
-                {
-                    isFire = true;
-                    resetAR();
-                    return;
-                }
-
-                GlobalAR.currentWarn = "fire";
-                foreach (var plane in m_ARPlaneManager.trackables)
-                {
-
-                    var stringid = plane.trackableId.ToString();
-                    if (planeAddFire.Contains(stringid))
-                    {
-                        continue;
-                    }
-                    //var distance = Mathf.Sqrt(Mathf.Pow(plane.transform.position.x - m_ARPlaneManager.transform.position.x, 2) +
-                    //       Mathf.Pow(plane.transform.position.z - m_ARPlaneManager.transform.position.z, 2));
-                    //if (distance > 15) continue;
-
-
-                    GameObject obj = (GameObject)Resources.Load("Bonfire");
-                    var rand = Random.Range(1.0f, 4.0f);
-                    obj.transform.localScale = new Vector3(rand, rand, rand);
-                    obj.transform.position = new Vector3(plane.transform.position.x, plane.transform.position.y, plane.transform.position.z);
-                    Instantiate(obj);
-                    if (plane.classification == PlaneClassification.Floor)
-                    {
-                        for (int i = 0; i <= 8; i++)
-                        {
-                            var randScale = Random.Range(1.0f, 4.0f);
-                            obj.transform.localScale = new Vector3(randScale, randScale, randScale);
-                            obj.transform.position = new Vector3(plane.transform.position.x + Random.Range(-7, 7), plane.transform.position.y, plane.transform.position.z + Random.Range(-7, 7));
-                            Instantiate(obj);
-                        }
-                    }
-                    planeAddFire.Add(stringid);
-                }
-            }
-            else
-            {
-                planeAddFire = new List<string>();
-                isFire = false;
-            }
-
-            if (feature.properties.risk_type == 1 || feature.properties.risk_type == 7)
-            {
-                occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Fastest;
-                meshManager.meshPrefab = occPrefab;
-
-                if (!isWater)
-                {
-                    isWater = true;
-                    resetAR();
-                    return;
-                }
-
-                
-                GlobalAR.currentWarn = "water";
-                var water = WaterAction.transform.Find("water").gameObject;
-                if (water != null)
-                {
-                    water.GetComponent<FloodController>().heigth = (float)feature.properties.water_level;
-                }
-                WaterAction.SetActive(true);
-                if (water != null)
-                {
-                    water.GetComponent<FloodController>().heigth = (float)feature.properties.water_level;
-                }
-
-            }
-            else
-            {
-                isWater = false;
-                WaterAction.SetActive(false);
-                occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Disabled;
-                meshManager.meshPrefab = nonePrefab;
-            }
-
-            if (feature.properties.risk_type == 8)
-            {
-                addLiquefaction();
-
-            }
-            else
-            {
-                isLique = false;
-                LiqueAction.SetActive(false);
-                occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Disabled;
-                meshManager.meshPrefab = nonePrefab;
-            }
-
-            if (feature.properties.risk_type == 2)
-            {
-                GlobalAR.currentWarn = "hill";
-                hillAnimation();
-            }
-            else
-            {
-                isHill = false;
-
-            }
-            if (feature.properties.risk_type == 3 || feature.properties.risk_type == 4 || feature.properties.risk_type == 6)
-            {
-                GlobalAR.currentWarn = "house";
-                hosueAnimation();
-            }
-            else
-            {
-                isHouse = false;
-            }
-            if (feature.properties.risk_type == 5)
-            {
-                if (!isWall)
-                {
-                    isWall = true;
-                    resetAR();
-                    return;
-                }
-                GlobalAR.currentWarn = "wall";
-                foreach (var plane in m_ARPlaneManager.trackables)
-                {
-                    var stringid = plane.trackableId.ToString();
-                    if (plane.classification == PlaneClassification.Wall)
-                    {
-                        if (planeAddBlock.Contains(stringid))
-                        {
-                            continue;
-                        }
-
-                        //var distance = Mathf.Sqrt(Mathf.Pow(plane.transform.position.x - m_ARPlaneManager.transform.position.x, 2) +
-                        //    Mathf.Pow(plane.transform.position.z - m_ARPlaneManager.transform.position.z, 2));
-                        //if (distance > 15) continue;
-                        GameObject obj = (GameObject)Resources.Load("Wall");
-
-                        obj.transform.position = new Vector3(plane.transform.position.x, plane.transform.position.y, plane.transform.position.z);
-                        obj.transform.forward = plane.transform.forward;
-                        obj.transform.Rotate(90, 180, 0);
-                        Instantiate(obj);
-                        planeAddBlock.Add(stringid);
-                    }
-
-                }
-            }
-            else
-            {
-                isWall = false;
-                planeAddBlock = new List<string>();
-            }
-            if (GlobalAR.currentWarn == "house" )
-            {
-                if (!houseAudio.isPlaying)
-                {
-                    houseAudio.Play();
-                }
-
-
-            }
-            else
-            {
-                houseAudio.Pause();
-            }
-            if ( GlobalAR.currentWarn == "hill")
-            {
-                if (!rockFallAudio.isPlaying)
-                {
-                    rockFallAudio.Play();
-                }
-
-
-            }
-            else
-            {
-                rockFallAudio.Pause();
-            }
+            Debug.Log("Loading data from persistent path");
+            string jsonData = File.ReadAllText(filePath);
+            ProcessJsonData(jsonData);
         }
         else
         {
-            
-            if (GlobalAR.demoMode == GlobalAR.AnimationMode.None)
+            Debug.Log("Downloading data from server");
+            StartCoroutine(DownloadGeoData());
+        }
+    }
+
+    private IEnumerator DownloadGeoData()
+    {
+        string url = GetDisasterLink();
+        if (string.IsNullOrEmpty(url))
+        {
+            url = "https://raw.githubusercontent.com/th-nguyen/cerdar-asset/refs/heads/main/data.geojson";
+            //Debug.LogError("No disaster link available");
+            //yield break;
+        }
+
+        using (UnityWebRequest www = UnityWebRequest.Get(url))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result != UnityWebRequest.Result.Success)
             {
-                GlobalAR.currentWarn = "";
-                rockFallAudio.Pause();
-                houseAudio.Pause();
-                WaterAction.SetActive(false);
-                occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Disabled;
-                meshManager.meshPrefab = nonePrefab;
+                Debug.LogError($"Error downloading data: {www.error}");
             }
             else
             {
-                if (GlobalAR.demoMode == GlobalAR.AnimationMode.Fire)
-                {
+                string jsonData = www.downloadHandler.text;
+                ProcessJsonData(jsonData);
 
-                    if (!isFire)
-                    {
-                        isFire = true;
-                        resetAR();
-                        return;
-                    }
-
-                    GlobalAR.currentWarn = "fire";
-                    foreach (var plane in m_ARPlaneManager.trackables)
-                    {
-
-                        var stringid = plane.trackableId.ToString();
-                        if (planeAddFire.Contains(stringid))
-                        {
-                            continue;
-                        }
-                        //var distance = Mathf.Sqrt(Mathf.Pow(plane.transform.position.x - m_ARPlaneManager.transform.position.x, 2) +
-                        //       Mathf.Pow(plane.transform.position.z - m_ARPlaneManager.transform.position.z, 2));
-                        //if (distance > 15) continue;
-
-
-                        GameObject obj = (GameObject)Resources.Load("Bonfire");
-                        var rand = Random.Range(1.0f, 4.0f);
-                        obj.transform.localScale = new Vector3(rand, rand, rand);
-                        obj.transform.position = new Vector3(plane.transform.position.x, plane.transform.position.y, plane.transform.position.z);
-                        Instantiate(obj);
-                        if (plane.classification == PlaneClassification.Floor)
-                        {
-                            for (int i = 0; i <= 8; i++)
-                            {
-                                var randScale = Random.Range(1.0f, 4.0f);
-                                obj.transform.localScale = new Vector3(randScale, randScale, randScale);
-                                obj.transform.position = new Vector3(plane.transform.position.x + Random.Range(-7, 7), plane.transform.position.y , plane.transform.position.z + Random.Range(-7, 7));
-                                Instantiate(obj);
-                            }
-                        }
-                        planeAddFire.Add(stringid);
-                    }
-                }
-                else
-                {
-                    planeAddFire = new List<string>();
-                    isFire = false;
-                }
-
-                if (GlobalAR.demoMode == GlobalAR.AnimationMode.Water)
-                {
-                    occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Fastest;
-                    meshManager.meshPrefab = occPrefab;
-
-                    if (!isWater)
-                    {
-                        isWater = true;
-                        resetAR();
-                        return;
-                    }
-
-
-                    GlobalAR.currentWarn = "water";
-                    var water = WaterAction.transform.Find("water").gameObject;
-                    if (water != null)
-                    {
-                        water.GetComponent<FloodController>().heigth = 1;
-                    }
-                    WaterAction.SetActive(true);
-                    if (water != null)
-                    {
-                        water.GetComponent<FloodController>().heigth = 1;
-                    }
-
-                }
-                else
-                {
-                    isWater = false;
-                    WaterAction.SetActive(false);
-                    occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Disabled;
-                    meshManager.meshPrefab = nonePrefab;
-                }
-
-                if(GlobalAR.demoMode == GlobalAR.AnimationMode.Lique)
-                {
-                    addLiquefaction();
-                }
-                else
-                {
-                    isLique = false;
-                    //LiqueAction.SetActive(false);
-                    occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Disabled;
-                    meshManager.meshPrefab = nonePrefab;
-                }
-
-                if (GlobalAR.demoMode == GlobalAR.AnimationMode.Stone)
-                {
-                    GlobalAR.currentWarn = "hill";
-                    hillAnimation();
-                }
-                else
-                {
-                    isHill = false;
-
-                }
-                if (GlobalAR.demoMode == GlobalAR.AnimationMode.Home)
-                {
-                    GlobalAR.currentWarn = "house";
-                    hosueAnimation();
-                }
-                else
-                {
-                    isHouse = false;
-                }
-                if (GlobalAR.demoMode == GlobalAR.AnimationMode.Wall)
-                {
-                    if (!isWall)
-                    {
-                        isWall = true;
-                        resetAR();
-                        return;
-                    }
-                    GlobalAR.currentWarn = "wall";
-                    foreach (var plane in m_ARPlaneManager.trackables)
-                    {
-                        var stringid = plane.trackableId.ToString();
-                        if (plane.classification == PlaneClassification.Wall)
-                        {
-                            if (planeAddBlock.Contains(stringid))
-                            {
-                                continue;
-                            }
-
-                            //var distance = Mathf.Sqrt(Mathf.Pow(plane.transform.position.x - m_ARPlaneManager.transform.position.x, 2) +
-                            //    Mathf.Pow(plane.transform.position.z - m_ARPlaneManager.transform.position.z, 2));
-                            //if (distance > 15) continue;
-                            GameObject obj = (GameObject)Resources.Load("Wall");
-
-                            obj.transform.position = new Vector3(plane.transform.position.x, plane.transform.position.y, plane.transform.position.z);
-                            obj.transform.forward = plane.transform.forward;
-
-                            obj.transform.Rotate(90, 180, 0);
-                            Instantiate(obj);
-                            planeAddBlock.Add(stringid);
-                        }
-
-                    }
-                }
-                else
-                {
-                    isWall = false;
-                    planeAddBlock = new List<string>();
-                }
-                if (GlobalAR.currentWarn == "house")
-                {
-                    if (!houseAudio.isPlaying)
-                    {
-                        houseAudio.Play();
-                    }
-
-
-                }
-                else
-                {
-                    houseAudio.Pause();
-                }
-
-                if (GlobalAR.currentWarn == "hill")
-                {
-                    if (!rockFallAudio.isPlaying)
-                    {
-                        rockFallAudio.Play();
-                    }
-
-
-                }
-                else
-                {
-                    rockFallAudio.Pause();
-                }
+                // Cache the data for future use
+                File.WriteAllText(
+                    Path.Combine(Application.persistentDataPath, "data.geojson"),
+                    jsonData
+                );
             }
         }
-
     }
 
-    void updateNotice()
+    private void ProcessJsonData(string jsonData)
     {
-        if (GlobalAR.nearWarn.Count > 0 || GlobalAR.insideWarn.Count > 0)
+        if (string.IsNullOrEmpty(jsonData))
         {
-            if (noticeMsg.Count == 0)
-            {
-                foreach (JSONModel.Feature f in GlobalAR.insideWarn)
-                {
-                    noticeMsg.Add(f.properties.message2);
-                }
-                foreach (JSONModel.Feature f in GlobalAR.nearWarn)
-                {
-                    noticeMsg.Add(f.properties.message1);
-                }
-            }
-            notice.SetActive(true);
-        }
-        else
-        {
-            notice.SetActive(false);
-        }
-        if (noticeMsg.Count > 0)
-        {
-            var text = GameObject.Find("status").GetComponent<Text>();
-            var textMsg = noticeMsg[0];
-            text.text = textMsg;
-            noticeMsg.Remove(textMsg);
-            notice.SetActive(true);
+            Debug.LogError("Received empty JSON data");
+            return;
         }
 
-    }
-
-    IEnumerator GetText()
-    {
-        var url = GetDisasterLink();
-        UnityWebRequest www = UnityWebRequest.Get(url);
-        yield return www.SendWebRequest();
-
-        if (www.result != UnityWebRequest.Result.Success)
+        try
         {
-            Debug.Log(www.error);
+            Root geoData = JsonConvert.DeserializeObject<Root>(jsonData);
+            GlobalAR.dataManager.storeData(geoData);
         }
-        else
+        catch (System.Exception ex)
         {
-            // Show results as text
-            Debug.Log(www.downloadHandler.text);
-            var text = www.downloadHandler.text;
-            var myObject = JsonConvert.DeserializeObject<Root>(text);
-
-            GlobalAR.dataManager.storeData(myObject);
-            //Debug.LogError(myObject.type);
+            Debug.LogError($"Error parsing JSON data: {ex.Message}");
         }
     }
 
-    public string GetDisasterLink()
+    private string GetDisasterLink()
     {
         string jsonFilePath = Path.Combine(Application.persistentDataPath, "disaster.json");
 
-        if (File.Exists(jsonFilePath))
+        if (!File.Exists(jsonFilePath))
         {
-            try
-            {
-                string jsonContent = File.ReadAllText(jsonFilePath);
+            Debug.LogError("Disaster configuration file not found");
+            return string.Empty;
+        }
 
-                // JSON データを JSONData クラスにデシリアライズする
-                Disaster jsonData = JsonUtility.FromJson<Disaster>(jsonContent);
-                string disasterLink = jsonData.disaster_link;
-                Debug.Log(disasterLink);
-                return disasterLink;
-            }
-            catch (System.Exception e)
+        try
+        {
+            string jsonContent = File.ReadAllText(jsonFilePath);
+            Disaster disasterConfig = JsonUtility.FromJson<Disaster>(jsonContent);
+            Debug.Log($"Using disaster link: {disasterConfig.disaster_link}");
+            return disasterConfig.disaster_link;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Error reading disaster configuration: {e.Message}");
+            return string.Empty;
+        }
+    }
+
+    // Update is called once per frame
+    private void Update()
+    {
+        HandleTouchInput();
+
+        if (!GlobalAR.isWorldLoad) return;
+
+        // Only perform these checks every 30 frames for performance
+        if (Time.frameCount % 30 != 0) return;
+
+        if (isFirstRun)
+        {
+            isFirstRun = false;
+            Initialize3DView();
+        }
+
+        UpdateARObjects();
+        HandleDialogDisplay();
+        UpdateDisasterEffects();
+    }
+
+    private void HandleTouchInput()
+    {
+        if (Input.touchCount <= 0) return;
+
+        Touch touch = Input.touches[0];
+        if (touch.phase != TouchPhase.Began) return;
+
+        Ray ray = arSessionOrigin.camera.ScreenPointToRay(touch.position);
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider == null) continue;
+
+            GameObject touchedObject = hit.transform.gameObject;
+            InfoModelController info = touchedObject.GetComponent<InfoModelController>();
+
+            if (info != null)
             {
-                Debug.LogError("JSON ファイルの読み込み中にエラーが発生しました: " + e.Message);
+                GlobalAR.currentFeature = info.feature;
+                GlobalAR.isViewDialog = true;
+                break;
             }
+        }
+    }
+
+    private void Initialize3DView()
+    {
+        DisplayInfoObjects(GlobalAR.dataManager.infoBox);
+        DisplayInfoObjects(GlobalAR.dataManager.warnBox);
+    }
+
+    private void UpdateARObjects()
+    {
+        DisplayInfoObjects(GlobalAR.outsideAR);
+    }
+
+    private void HandleDialogDisplay()
+    {
+        if (GlobalAR.isViewDialog && !GlobalAR.isShowedDialog)
+        {
+            uiManager.ShowDialog();
+        }
+    }
+
+    private void UpdateDisasterEffects()
+    {
+        if (GlobalAR.insideWarn.Count > 0 && GlobalAR.demoMode == GlobalAR.AnimationMode.None)
+        {
+            var feature = GlobalAR.insideWarn[0];
+            disasterEffects.ApplyDisasterEffect(feature);
         }
         else
         {
-            Debug.LogError("JSON ファイルが見つかりません。");
-        }
-
-        return ""; // エラーが発生した場合、またはファイルが存在しない場合は "" を返す
-    }
-    void Info3DView(List<JSONModel.Feature> arrF)
-    {
-        foreach (JSONModel.Feature f in arrF)
-        {
-
-
-            GeoCoordinate target = new GeoCoordinate(f.geometry.coordinates[1], f.geometry.coordinates[0]);
-            var distance = target.GetDistanceTo(GlobalAR.currentlocation);
-            if (f.properties.info_type == GlobalAR.kWarn)
+            // Handle demo mode or no active warnings
+            if (GlobalAR.demoMode == GlobalAR.AnimationMode.None)
             {
-                if (f.properties.range != null)
-                {
-                    var range = (float)f.properties.range;
-                    distance = distance - range;
-                }
-            }
-            if (distance > GlobalAR.disCam)
-            {
-                GlobalAR.outsideAR.Add(f);
+                disasterEffects.ClearAllEffects();
             }
             else
             {
-                string objName = "icon_infoTag";
-                if (f.properties.info_type == GlobalAR.kWarn)
-                {
-                    objName = "icon_warn3";
-                }
-                if (!string.IsNullOrEmpty(f.properties.icon))
-                    objName = f.properties.icon.Replace(".png", "").Replace(".jpg", "");
-
-                GameObject obj = (GameObject)Resources.Load(objName);
-                if (obj == null)
-                {
-                    if (f.properties.info_type == GlobalAR.kWarn)
-                    {
-                        obj = (GameObject)Resources.Load("icon_warn3");
-                    }
-                    else
-                    {
-                        continue;
-                    }
-
-                }
-                GlobalAR.insideAR.Add(f);
-                //GameObject instance = Instantiate(obj, GeoTool.ConvertCoordinateFromCurrentLocation(target, GlobalAR.heightAR, 0f), Quaternion.identity) as GameObject;
-                GameObject instance = Instantiate(obj, GeoTool.ConvertGPS2Position(target, GlobalAR.heightAR, m_CameraManager.transform.position), Quaternion.identity) as GameObject;
-                InfoModelController info = instance.GetComponent("InfoModelController") as InfoModelController;
-                info.feature = f;
+                disasterEffects.ApplyDemoEffect(GlobalAR.demoMode);
             }
         }
     }
-    void update3DView(List<JSONModel.Feature> arrF)
+
+    private void UpdateNotice()
     {
-        foreach (JSONModel.Feature f in arrF)
+        uiManager.UpdateNoticeMessages(GlobalAR.insideWarn, GlobalAR.nearWarn);
+    }
+
+    private void DisplayInfoObjects(List<JSONModel.Feature> features)
+    {
+        if (features == null || features.Count == 0) return;
+
+        List<JSONModel.Feature> processed = new List<JSONModel.Feature>();
+
+        foreach (JSONModel.Feature feature in features)
         {
-            string objName = "icon_infoTag";
-            if (f.properties.info_type == GlobalAR.kWarn)
-            {
-                objName = "icon_warn3";
-            }
-            if (!string.IsNullOrEmpty(f.properties.icon))
-                objName = f.properties.icon.Replace(".png", "").Replace(".jpg", "");
-            GameObject obj = (GameObject)Resources.Load(objName);
-            if (obj == null)
-            {
-                if (f.properties.info_type == GlobalAR.kWarn)
-                {
-                    obj = (GameObject)Resources.Load("icon_warn3");
-                }
-                else
-                {
-                    continue;
-                }
+            GeoCoordinate targetLocation = new GeoCoordinate(
+                feature.geometry.coordinates[1],
+                feature.geometry.coordinates[0]
+            );
 
+            float distance = (float)targetLocation.GetDistanceTo(GlobalAR.currentlocation);
+
+            // Adjust distance for warning features with a range
+            if (feature.properties.info_type == GlobalAR.kWarn && feature.properties.range != null)
+            {
+                distance -= (float)feature.properties.range;
             }
 
-            GeoCoordinate target = new GeoCoordinate(f.geometry.coordinates[1], f.geometry.coordinates[0]);
-            var distance = target.GetDistanceTo(GlobalAR.currentlocation);
-            if (f.properties.info_type == GlobalAR.kWarn)
-            {
-                if (f.properties.range != null)
-                {
-                    var range = (float)f.properties.range;
-                    distance = distance - range;
-                }
-            }
             if (distance > GlobalAR.disCam)
             {
-                //GlobalAR.outsideAR.Add(f);
-            }
-            else
-            {
-                if (!GlobalAR.insideAR.Contains(f))
+                if (!GlobalAR.outsideAR.Contains(feature))
                 {
-                    GlobalAR.insideAR.Add(f);
-                    //GameObject instance = Instantiate(obj, GeoTool.ConvertCoordinateFromCurrentLocation(target, GlobalAR.heightAR, 0f), Quaternion.identity) as GameObject;
-                    GameObject instance = Instantiate(obj, GeoTool.ConvertGPS2Position(target, GlobalAR.heightAR, m_CameraManager.transform.position), Quaternion.identity) as GameObject;
-                    InfoModelController info = instance.GetComponent("InfoModelController") as InfoModelController;
-                    info.feature = f;
+                    GlobalAR.outsideAR.Add(feature);
                 }
-
             }
-
-
-        }
-    }
-
-    void hillAnimation()
-    {
-
-        addGameObjectRandom("rock1");
-        addGameObjectRandom("rock2");
-        addGameObjectRandom("rock3");
-        addGameObjectRandom("rock4");
-        addGameObjectRandom("rock5");
-        addGameObjectRandom("rock6");
-
-        addGameObjectRandom("rock1");
-        addGameObjectRandom("rock2");
-        addGameObjectRandom("rock3");
-        addGameObjectRandom("rock4");
-        addGameObjectRandom("rock5");
-        addGameObjectRandom("rock6");
-
-
-    }
-    void hosueAnimation()
-    {
-        addGameObjectRandom("house part 1");
-        addGameObjectRandom("house part 2");
-        addGameObjectRandom("house part 3");
-        addGameObjectRandom("house part 4");
-        addGameObjectRandom("house part 5");
-
-        addGameObjectRandom("house part 1");
-        addGameObjectRandom("house part 2");
-        addGameObjectRandom("house part 3");
-        addGameObjectRandom("house part 4");
-        addGameObjectRandom("house part 5");
-
-    }
-
-    void addGameObjectRandom(string objectName)
-    {
-        var limit = Random.Range(5, 10);
-        for (int i = 0; i < limit; i++)
-        {
-            GameObject obj = (GameObject)Resources.Load(objectName);
-            var pos = m_CameraManager.transform.position;
-            obj.transform.localPosition = new Vector3(pos.x + Random.Range(-4.0f, 4.0f), pos.y + 5, pos.z + Random.Range(-4.0f, 4.0f));
-            obj.transform.rotation = Random.rotation;
-            Instantiate(obj);
-        }
-    }
-    public Vector3 ConvertGPS2ARCoordinate(JSONModel.Feature ft)
-    {
-        double dz = (ft.geometry.coordinates[1] - GlobalAR.userLat) * GlobalAR.lat2km;   // -z????????
-        double dx = -(ft.geometry.coordinates[0] - GlobalAR.userLng) * GlobalAR.lat2km; // +x????????
-        return new Vector3((float)dx, 0, (float)dz);
-    }
-    public void printXYZ(Vector3 vc)
-    {
-        Debug.Log(vc.x + " ; " + vc.y + ";" + vc.z);
-    }
-    public void printXYZW(Quaternion vc)
-    {
-        Debug.Log(vc.x + " ; " + vc.y + ";" + vc.z + ";" + vc.w);
-    }
-    public void addLiquefaction()
-    {
-        occlusionManager.requestedEnvironmentDepthMode = EnvironmentDepthMode.Fastest;
-        meshManager.meshPrefab = occPrefab;
-
-        if (!isLique)
-        {
-            isLique = true;
-            resetAR();
-            return;
-        }
-
-
-        GlobalAR.currentWarn = "lique";
-        //LiqueAction.SetActive(true);
-        foreach (var plane in m_ARPlaneManager.trackables)
-        {
-
-            var stringid = plane.trackableId.ToString();
-            if (planeLiqueBlock.Contains(stringid))
+            else if (!GlobalAR.insideAR.Contains(feature))
             {
-                continue;
+                SpawnInfoObject(feature, targetLocation);
+                GlobalAR.insideAR.Add(feature);
+                processed.Add(feature);
             }
-            //var distance = Mathf.Sqrt(Mathf.Pow(plane.transform.position.x - m_ARPlaneManager.transform.position.x, 2) +
-            //       Mathf.Pow(plane.transform.position.z - m_ARPlaneManager.transform.position.z, 2));
-            //if (distance > 15) continue;
+        }
 
-            GameObject TreeSwing = (GameObject)Resources.Load("TreeSwing");
-            //GameObject LancanSwing = (GameObject)Resources.Load("LancanSwing");
-            GameObject Manhole = (GameObject)Resources.Load("manhole");
-
-            if (plane.classification == PlaneClassification.Floor)
+        // Remove processed features from the outside list
+        foreach (var feature in processed)
+        {
+            if (GlobalAR.outsideAR.Contains(feature))
             {
-                TreeSwing.transform.position = new Vector3(plane.transform.position.x, plane.transform.position.y, plane.transform.position.z);
-                Instantiate(TreeSwing);
-                //LancanSwing.transform.position = new Vector3(plane.transform.position.x - 3, plane.transform.position.y, plane.transform.position.z);
-                //Instantiate(LancanSwing);
-                Manhole.transform.position = new Vector3(plane.transform.position.x + 1, plane.transform.position.y, plane.transform.position.z);
-                Instantiate(Manhole);
-                ARPlane ar = new ARPlane();
-                for (int i = 0; i < 1; i++)
-                {
-                    int randomValue = Random.Range(0, 1) == 0 ? -1 : 1;
-                    float x = plane.transform.position.x + Random.Range(4, 7)* randomValue;
-                    
-                    float z = plane.transform.position.z + Random.Range(4, 7)* randomValue;
-                    TreeSwing.transform.position = new Vector3(x, plane.transform.position.y, z);
-                    Instantiate(TreeSwing);
-                    Manhole.transform.position = new Vector3(x + 1, plane.transform.position.y, z);
-                    Instantiate(Manhole);
-                }
-
+                GlobalAR.outsideAR.Remove(feature);
             }
-
-            planeLiqueBlock.Add(stringid);
         }
     }
-    public void resetAR()
-    {
-        var tag1_Objects = GameObject.FindGameObjectsWithTag("ARViewer");
 
-        for (int i = 0; i < tag1_Objects.Length; i++)
+    private void SpawnInfoObject(JSONModel.Feature feature, GeoCoordinate targetLocation)
+    {
+        string prefabName = DeterminePrefabName(feature);
+        GameObject prefab = resourceManager.GetPrefab(prefabName);
+
+        if (prefab == null) return;
+
+        Vector3 position = GeoTool.ConvertGPS2Position(
+            targetLocation,
+            GlobalAR.heightAR,
+            arCameraManager.transform.position
+        );
+
+        GameObject instance = Instantiate(prefab, position, Quaternion.identity);
+        instance.tag = "ARViewer";
+
+        InfoModelController infoController = instance.GetComponent<InfoModelController>();
+        if (infoController != null)
         {
-            Destroy(tag1_Objects[i]);
+            infoController.feature = feature;
         }
-        m_ARPlaneManager = FindObjectOfType<ARPlaneManager>();
-        m_CameraManager = FindObjectOfType<ARCameraManager>();
-        m_ARSessionOrigin = FindObjectOfType<ARSessionOrigin>();
-        m_ARSession = FindObjectOfType<ARSession>();
-        noticeMsg = new List<string>();
-        planeAddFire = new List<string>();
-        planeAddBlock = new List<string>();
-        planeLiqueBlock = new List<string>();
-        GlobalAR.insideWarn = new List<JSONModel.Feature>();
-        GlobalAR.nearWarn = new List<JSONModel.Feature>();
-        GlobalAR.insideAR = new List<JSONModel.Feature>();
-        GlobalAR.outsideAR = new List<JSONModel.Feature>();
+    }
+
+    private string DeterminePrefabName(JSONModel.Feature feature)
+    {
+        if (!string.IsNullOrEmpty(feature.properties.icon))
+        {
+            return feature.properties.icon.Replace(".png", "").Replace(".jpg", "");
+        }
+
+        return feature.properties.info_type == GlobalAR.kWarn ? "icon_warn3" : "icon_infoTag";
+    }
+
+    public void ResetAR()
+    {
+        // Destroy all AR objects
+        GameObject[] arObjects = GameObject.FindGameObjectsWithTag("ARViewer");
+        foreach (GameObject obj in arObjects)
+        {
+            Destroy(obj);
+        }
+
+        // Re-acquire AR components
+        arPlaneManager = FindObjectOfType<ARPlaneManager>();
+        arCameraManager = FindObjectOfType<ARCameraManager>();
+        arSessionOrigin = FindObjectOfType<ARSessionOrigin>();
+        arSession = FindObjectOfType<ARSession>();
+
+        // Reset all state
+        disasterEffects.Reset();
+        uiManager.Reset();
+
+        // Reset global state
+        GlobalAR.insideWarn.Clear();
+        GlobalAR.nearWarn.Clear();
+        GlobalAR.insideAR.Clear();
+        GlobalAR.outsideAR.Clear();
         GlobalAR.isWorldLoad = false;
-        firstRun = true;
-        dialogInfo.SetActive(false);
-        notice.SetActive(false);
-#if UNITY_IOS
-        var sessionSubsystem = (ARKitSessionSubsystem)m_ARSession.subsystem;
-#else
-            XRSessionSubsystem sessionSubsystem = null;
-#endif
-        if (sessionSubsystem == null)
-            return;
+        isFirstRun = true;
 
+        // Reset AR session on iOS
 #if UNITY_IOS
-        m_ARSession.Reset();
+        var sessionSubsystem = (ARKitSessionSubsystem)arSession.subsystem;
+        if (sessionSubsystem != null)
+        {
+            arSession.Reset();
+        }
 #endif
-       
     }
 }

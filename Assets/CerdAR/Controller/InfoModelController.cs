@@ -101,7 +101,7 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
             Destroy(gameObject);
         }
 
-        var bearing = GeoTool.CalculateBearing( GlobalAR.currentlocation,target);
+        var bearing = GeoTool.CalculateBearing(GlobalAR.currentlocation, target);
         //float x = position.x + m_CameraManager.transform.position.x;
         //float y = position.y + m_CameraManager.transform.position.y;
         //float z = position.z + m_CameraManager.transform.position.z;
@@ -112,7 +112,7 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
         //transform.LookAt(m_CameraManager.transform.forward);
         //Debug.Log(degrees.ToString());
         //Debug.Log(bearing.ToString());
-        transform.rotation =  Quaternion.Euler(0, 180 + (float)bearing, 0);
+        transform.rotation = Quaternion.Euler(0, 180 + (float)bearing, 0);
         float scale = (float)(0.5 + 0.1 * distanceGPS);
         transform.localScale = new Vector3(scale, scale, scale);
 

@@ -30,22 +30,22 @@ public class WarnAnimationController : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        if (GlobalAR.currentWarn == "wall")
-        {
-            timer += Time.deltaTime;
+        //if (GlobalAR.currentWarn == "wall")
+        //{
+        //    timer += Time.deltaTime;
 
-            if (timer > waitTime)
-            {
-                var tranformOld = transform;
-                Destroy(gameObject);
-                GameObject obj = (GameObject)Resources.Load("Wall");
-                obj.transform.position = tranformOld.position;
-                obj.transform.rotation = tranformOld.rotation;
-                Instantiate(obj);
-                timer = 0.0f;
+        //    if (timer > waitTime)
+        //    {
+        //        var tranformOld = transform;
+        //        Destroy(gameObject);
+        //        GameObject obj = (GameObject)Resources.Load("Wall");
+        //        obj.transform.position = tranformOld.position;
+        //        obj.transform.rotation = tranformOld.rotation;
+        //        Instantiate(obj);
+        //        timer = 0.0f;
 
-            }
-        }
+        //    }
+        //}
         //if (GlobalAR.currentWarn == "house")
         //{
         //    timer += Time.deltaTime;

@@ -35,10 +35,10 @@ public class DialogInfoController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!GlobalAR.isShowedDialog)
+        if (GlobalAR.isShowedDialog)
         {
-            main.SetActive(true);
             setFeature(GlobalAR.currentFeature);
+            main.SetActive(true);
         }
     }
 
@@ -109,11 +109,27 @@ public class DialogInfoController : MonoBehaviour
     }
     public void openYoutube()
     {
-        if (GlobalAR.currentFeature.properties.pic_type == GlobalAR.kMovie && GlobalAR.currentFeature.properties.movie != null)
+        if (GlobalAR.currentFeature.properties.pic_type == GlobalAR.kMovie &&
+                GlobalAR.currentFeature.properties.movie != null)
         {
-            Application.OpenURL(GlobalAR.currentFeature.properties.movie);
+            // Try to find existing SimpleYoutubePlayer
+            SimpleYoutubePlayer youtubePlayer = FindObjectOfType<SimpleYoutubePlayer>();
+
+            // If not found, create one
+            if (youtubePlayer == null)
+            {
+                GameObject youtubePlayerObj = new GameObject("SimpleYoutubePlayer");
+                youtubePlayer = youtubePlayerObj.AddComponent<SimpleYoutubePlayer>();
+            }
+
+            // Open YouTube dialog with the movie URL
+            youtubePlayer.OpenYouTubeDialog(GlobalAR.currentFeature.properties.movie);
         }
-       
+        else
+        {
+            // Fallback if properties are not properly set
+            Debug.LogWarning("YouTube video URL not found or type is not movie");
+        }
     }
     public string URI = "https://www.musubou.net/musubou-ar/AR_logo.jpg/AR_logo.jpg";
 

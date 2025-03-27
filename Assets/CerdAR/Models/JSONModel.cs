@@ -40,6 +40,11 @@ namespace JSONModel
         public string? pic_type { get; set; }
         public string? photo { get; set; }
         public double? water_level { get; set; }
+        public double? intensity { get; set; }
+        public double? wall_count { get; set; }
+        public double? lique_mode;  //  0: WaterPipes,1: PowerPoles, 2: Both
+
+
     }
 
 
