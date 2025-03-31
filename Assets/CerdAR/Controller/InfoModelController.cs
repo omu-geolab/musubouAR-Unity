@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,22 +10,29 @@ using System.Linq;
 
 public class InfoModelController : MonoBehaviour, IPointerClickHandler
 {
-    // Start is called before the first frame update
+    // Feature data
     public Feature feature;
 
+    // Components
     Camera m_CameraManager;
     public TextMesh distanceText;
 #nullable enable
     public TextMesh? description;
 
+    // Update interval control
+    private float updateInterval = 0.2f;
+    private float nextUpdateTime = 0;
+
     void Start()
     {
         m_CameraManager = GameObject.Find("AR Camera").GetComponent<Camera>();
         gameObject.tag = "ARViewer";
-        //if (description != null && feature != null)
-        //{
-        //    description.text = feature.properties.description;
-        //}
+
+        // Initialize position on start
+        if (feature != null)
+        {
+            UpdatePositionAndRotation();
+        }
     }
 
     private void OnEnable()
@@ -32,18 +40,29 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
         m_CameraManager = GameObject.Find("AR Camera").GetComponent<Camera>();
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (feature == null) return;
-        if (Time.frameCount % 60 != 0) { return; }
+
+        // Update at fixed intervals
+        if (Time.time >= nextUpdateTime)
+        {
+            nextUpdateTime = Time.time + updateInterval;
+            UpdatePositionAndRotation();
+        }
+    }
+
+    private void UpdatePositionAndRotation()
+    {
+        if (feature == null) return;
 
         GeoCoordinate target = new GeoCoordinate(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
 
+        // Calculate distance
         var distanceGPS = target.GetDistanceTo(GlobalAR.currentlocation);
         var distance = distanceGPS;
-        //Vector3 position = new Vector3();
 
+        // Process warnings
         if (feature.properties.info_type == GlobalAR.kWarn)
         {
             if (feature.properties.range != null)
@@ -57,13 +76,8 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
                     if (!GlobalAR.insideWarn.Contains(feature))
                     {
                         GlobalAR.insideWarn.Add(feature);
-
                     }
                     GlobalAR.nearWarn = GlobalAR.nearWarn.Where(item => item.id != feature.id).ToList();
-
-                    //position = ConvertGPS2ARCoordinate(feature);
-                    //position.y = -4000;
-
                 }
                 else
                 {
@@ -79,51 +93,49 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
                         GlobalAR.nearWarn = GlobalAR.nearWarn.Where(item => item.id != feature.id).ToList();
                     }
                     GlobalAR.insideWarn = GlobalAR.insideWarn.Where(item => item.id != feature.id).ToList();
-
-                    //position = GeoTool.ConvertCoordinateFromCurrentLocation(target,GlobalAR.heightAR, 0);
-                    //position = ConvertGPS2ARCoordinate(feature);
                 }
                 distanceText.text = distance.ToString("F0") + "m";
-
             }
         }
         else
         {
-            //position = ConvertGPS2ARCoordinate(feature);
             distanceText.text = distance.ToString("F0") + "m";
-
         }
 
+        // Check if in range
         if (distance > GlobalAR.disCam)
         {
             GlobalAR.outsideAR.Add(feature);
             GlobalAR.insideAR = GlobalAR.insideAR.Where(item => item.id != feature.id).ToList();
             Destroy(gameObject);
+            return;
         }
 
-        var bearing = GeoTool.CalculateBearing(GlobalAR.currentlocation, target);
-        //float x = position.x + m_CameraManager.transform.position.x;
-        //float y = position.y + m_CameraManager.transform.position.y;
-        //float z = position.z + m_CameraManager.transform.position.z;
-        //transform.position = new Vector3(x, y,z);
-        //Debug.Log(position.ToString());
-        //var angle = Mathf.Atan2(transform.position.z - m_CameraManager.transform.position.z , transform.position.x - m_CameraManager.transform.position.x);
-        //float degrees = (180 / Mathf.PI) * angle;
-        //transform.LookAt(m_CameraManager.transform.forward);
-        //Debug.Log(degrees.ToString());
-        //Debug.Log(bearing.ToString());
-        transform.rotation = Quaternion.Euler(0, 180 + (float)bearing, 0);
-        float scale = (float)(0.5 + 0.1 * distanceGPS);
+        // Position using the original GPS conversion method
+        Vector3 position = ConvertGPS2ARCoordinate(feature);
+
+        // Apply position offset from camera
+        Vector3 cameraPosXZ = new Vector3(m_CameraManager.transform.position.x, 0, m_CameraManager.transform.position.z);
+        position = position + cameraPosXZ;
+
+        // Set final position
+        transform.position = new Vector3(position.x, GlobalAR.heightAR, position.z);
+
+        // Simply copy camera's rotation directly to the icon
+        // Try a very direct approach - just copy the camera's exact rotation
+        // This forces icons to face exactly the same direction as the camera
+        transform.rotation = Quaternion.Euler(0, m_CameraManager.transform.rotation.eulerAngles.y, 0);
+
+        // Scale based on distance - with increased size
+        float scale = Mathf.Clamp((float)(1.0 + 0.1 * distanceGPS), 1.0f, 7.0f);
         transform.localScale = new Vector3(scale, scale, scale);
-
-
-
-
     }
+
+    // The original coordinate conversion method from your code
     public Vector3 ConvertGPS2ARCoordinate(Feature ft)
     {
-        double dz = (ft.geometry.coordinates[1] - GlobalAR.userLat) * GlobalAR.lat2km;   // -z????????
-        double dx = -(ft.geometry.coordinates[0] - GlobalAR.userLng) * GlobalAR.lat2km; // +x????????
+        double dz = (ft.geometry.coordinates[1] - GlobalAR.userLat) * GlobalAR.lat2km;   // -z is south
+        double dx = -(ft.geometry.coordinates[0] - GlobalAR.userLng) * GlobalAR.lat2km; // +x is east
         return new Vector3((float)dx, 0, (float)dz);
     }
 
@@ -133,37 +145,18 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
 
         GlobalAR.currentFeature = feature;
         GlobalAR.isViewDialog = true;
-        //DialogInfoController info = dialog.GetComponent<DialogInfoController>();
-        //if (info == null) return;
-        //info.setFeature(feature);
-
-        //Debug.Log(feature.properties.photo);
-        //Debug.Log(Application.persistentDataPath);
-        //Debug.Log(Application.dataPath);
-        //Debug.Log(Application.absoluteURL);
     }
+
     public void onClick()
     {
         if (feature == null) return;
 
         GlobalAR.currentFeature = feature;
         GlobalAR.isViewDialog = true;
-        //DialogInfoController info = dialog.GetComponent<DialogInfoController>();
-        //if (info == null) return;
-        //info.setFeature(feature);
-
-        //Debug.Log(feature.properties.photo);
-        Debug.Log(Application.persistentDataPath);
-        Debug.Log(Application.dataPath);
-        Debug.Log(Application.absoluteURL);
     }
+
     private void OnDisable()
     {
         Destroy(gameObject);
     }
-    void OnTriggerEnter(Collider other)
-    {
-        Debug.Log("???????????I");
-    }
-
 }
