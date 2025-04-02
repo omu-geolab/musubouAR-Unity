@@ -120,9 +120,9 @@ public class MainController : MonoBehaviour
         string url = GetDisasterLink();
         if (string.IsNullOrEmpty(url))
         {
-            url = "https://raw.githubusercontent.com/th-nguyen/cerdar-asset/refs/heads/main/data.geojson";
-            //Debug.LogError("No disaster link available");
-            //yield break;
+            //url = "https://raw.githubusercontent.com/th-nguyen/cerdar-asset/refs/heads/main/data.geojson";
+            Debug.LogError("No disaster link available");
+            yield break;
         }
 
         using (UnityWebRequest www = UnityWebRequest.Get(url))
