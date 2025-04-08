@@ -434,6 +434,13 @@ public class DisasterEffectsManager
             // Skip if already has an active wall
             if (hasActiveWall) continue;
 
+            // Make sure plane is minimum size
+            float minPlaneSize = 0.5f; // Minimum 0.5m in size
+            if (plane.size.x < minPlaneSize || plane.size.y < minPlaneSize)
+            {
+                continue;
+            }
+
             // Calculate distance to camera
             float distance = Vector3.Distance(plane.transform.position, cameraPosition);
             wallPlanes.Add((plane, distance));
@@ -466,11 +473,45 @@ public class DisasterEffectsManager
             // Add BrickWallController component
             BrickWallController brickWall = wallController.AddComponent<BrickWallController>();
 
-            // Configure
+            // Configure basic properties
             brickWall.wallPlane = plane;
             brickWall.initialDelay = 1.0f + Random.Range(0f, 1.0f);
             brickWall.totalLifetime = DEFAULT_WALL_LIFETIME;
             brickWall.wallNormal = wallNormal;
+
+            // Calculate wall dimensions based on the plane size
+            float wallWidth, wallHeight;
+
+            // Calculate from plane size, but scale down slightly for better fit
+            // Using horizontal dimension of the plane (width)
+            wallWidth = Mathf.Min(plane.size.x * 0.9f, 3.0f); // Max width of 3 meters
+
+            // Calculate from plane size, but scale down
+            // Using vertical dimension of the plane (height)
+            wallHeight = Mathf.Min(plane.size.y * 0.9f, 2.5f); // Max height of 2.5 meters
+
+            // Ensure minimum height and width
+            wallHeight = Mathf.Max(wallHeight, 1.0f); // Minimum 1 meter height
+            wallWidth = Mathf.Max(wallWidth, 0.8f); // Minimum 0.8 meter width
+
+            // Set wall dimensions
+            brickWall.wallWidth = wallWidth;
+            brickWall.wallHeight = wallHeight;
+
+            // Scale brick size proportionally to the wall size
+            // This keeps the number of bricks reasonable regardless of wall size
+            float scaleFactor = Mathf.Max(wallWidth, wallHeight) / 2.0f; // Normalize by a 2-meter reference
+            scaleFactor = Mathf.Clamp(scaleFactor, 0.7f, 1.3f); // Limit scaling range
+
+            // Scale brick size proportionally to the wall size
+            brickWall.brickWidth = 0.2f * scaleFactor;
+            brickWall.brickHeight = 0.1f * scaleFactor;
+            brickWall.brickDepth = 0.1f * scaleFactor;
+
+            // Set falling force based on wall size
+            // Larger walls fall with more force
+            float sizeFactor = Mathf.Max(wallWidth, wallHeight) / 2.0f; // Normalized by 2m reference
+            brickWall.fallingForce = Mathf.Clamp(2.0f * sizeFactor, 1.0f, 5.0f);
 
             // Add to tracking
             wallObjects.Add(wallController);
@@ -480,7 +521,6 @@ public class DisasterEffectsManager
             planeLastUsedTime[planeId] = currentTime;
         }
     }
-
     private void CleanupInvalidWalls()
     {
         // Remove any null or destroyed walls from the list

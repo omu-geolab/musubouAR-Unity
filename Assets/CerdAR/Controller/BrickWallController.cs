@@ -40,6 +40,7 @@ public class BrickWallController : MonoBehaviour
     private GameObject brickPrefab;
     private float creationTime;
     private AudioSource audioSource;
+    private int totalRowCount = 0;
 
     void Start()
     {
@@ -151,7 +152,7 @@ public class BrickWallController : MonoBehaviour
     {
         // Calculate number of bricks per row and number of rows
         int bricksPerRow = Mathf.FloorToInt(wallWidth / brickWidth);
-        int rowCount = Mathf.FloorToInt(wallHeight / brickHeight);
+        totalRowCount = Mathf.FloorToInt(wallHeight / brickHeight);
 
         // Calculate starting position
         Vector3 startPos = transform.position;
@@ -164,7 +165,7 @@ public class BrickWallController : MonoBehaviour
         startPos -= Vector3.up * (wallHeight / 2);
 
         // Build each row of bricks
-        for (int row = 0; row < rowCount; row++)
+        for (int row = 0; row < totalRowCount; row++)
         {
             // Each even row will be offset by half a brick
             float offsetX = (row % 2 == 0) ? 0 : brickWidth / 2;
@@ -185,6 +186,10 @@ public class BrickWallController : MonoBehaviour
                 brick.transform.SetParent(transform);
                 brick.SetActive(true);
                 brick.tag = "ARViewer";
+
+                // Store the row number as a component to identify bottom row later
+                BrickData brickData = brick.AddComponent<BrickData>();
+                brickData.rowIndex = row;
 
                 // Add to list for management
                 bricks.Add(brick);
@@ -221,8 +226,11 @@ public class BrickWallController : MonoBehaviour
         {
             if (brick == null) continue;
 
-            // Calculate row based on height
-            int row = Mathf.FloorToInt((brick.transform.position.y - (transform.position.y - wallHeight / 2)) / brickHeight);
+            // Get row index from BrickData component
+            BrickData brickData = brick.GetComponent<BrickData>();
+            if (brickData == null) continue;
+
+            int row = brickData.rowIndex;
 
             if (!bricksByRow.ContainsKey(row))
             {
@@ -236,9 +244,12 @@ public class BrickWallController : MonoBehaviour
         List<int> rows = new List<int>(bricksByRow.Keys);
         rows.Sort((a, b) => b.CompareTo(a)); // Sort descending
 
-        // Make each row fall sequentially from top to bottom
+        // Make each row fall sequentially from top to bottom, except the bottom row
         foreach (int row in rows)
         {
+            // Skip bottom row (row 0)
+            if (row == 0) continue;
+
             if (!bricksByRow.ContainsKey(row)) continue;
 
             foreach (GameObject brick in bricksByRow[row])
@@ -249,16 +260,32 @@ public class BrickWallController : MonoBehaviour
                 if (rb != null)
                 {
                     rb.isKinematic = false;
+                    rb.useGravity = true;
 
-                    // Add falling force
-                    rb.AddForce(fallDirection * fallingForce, ForceMode.Impulse);
+                    // Adjust mass slightly based on height for more natural motion
+                    rb.mass = 1.0f;
 
-                    // Add random torque for natural falling effect
-                    rb.AddTorque(torqueAxis * Random.Range(0.5f, 1.5f), ForceMode.Impulse);
+                    // Add very gentle forward force
+                    float forwardForce = fallingForce * 0.1f;
+                    rb.AddForce(fallDirection * forwardForce, ForceMode.Impulse);
+
+                    // Add small random forces to create natural variation
+                    rb.AddForce(new Vector3(
+                        Random.Range(-0.03f, 0.03f),
+                        Random.Range(0.01f, 0.05f),
+                        Random.Range(-0.03f, 0.03f)
+                    ), ForceMode.Impulse);
+
+                    // Add slight random rotation for variation
+                    rb.AddTorque(new Vector3(
+                        Random.Range(-0.1f, 0.1f),
+                        Random.Range(-0.1f, 0.1f),
+                        Random.Range(-0.1f, 0.1f)
+                    ), ForceMode.Impulse);
                 }
             }
 
-            // Wait a short time before moving to next row
+            // Short delay between rows to create top-down cascade effect
             yield return new WaitForSeconds(0.05f);
         }
     }
@@ -318,4 +345,10 @@ public class BrickWallController : MonoBehaviour
             Destroy(brickPrefab);
         }
     }
+}
+
+// Simple component to store brick metadata
+public class BrickData : MonoBehaviour
+{
+    public int rowIndex;
 }
