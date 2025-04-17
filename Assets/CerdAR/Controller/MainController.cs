@@ -139,10 +139,10 @@ public class MainController : MonoBehaviour
                 ProcessJsonData(jsonData);
 
                 // Cache the data for future use
-                File.WriteAllText(
-                    Path.Combine(Application.persistentDataPath, "data.geojson"),
-                    jsonData
-                );
+                //File.WriteAllText(
+                //    Path.Combine(Application.persistentDataPath, "data.geojson"),
+                //    jsonData
+                //);
             }
         }
     }
