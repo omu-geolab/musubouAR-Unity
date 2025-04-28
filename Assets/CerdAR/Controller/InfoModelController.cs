@@ -135,7 +135,7 @@ public class InfoModelController : MonoBehaviour, IPointerClickHandler
     public Vector3 ConvertGPS2ARCoordinate(Feature ft)
     {
         double dz = (ft.geometry.coordinates[1] - GlobalAR.userLat) * GlobalAR.lat2km;   // -z is south
-        double dx = -(ft.geometry.coordinates[0] - GlobalAR.userLng) * GlobalAR.lat2km; // +x is east
+        double dx = (ft.geometry.coordinates[0] - GlobalAR.userLng) * GlobalAR.lat2km; // +x is east
         return new Vector3((float)dx, 0, (float)dz);
     }
 
