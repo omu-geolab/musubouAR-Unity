@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Networking;
 using System.Device.Location;
+using System.Runtime.InteropServices; // これを忘れずに
+
 public class DialogInfoController : MonoBehaviour
 {
     public Text title;
@@ -16,7 +18,6 @@ public class DialogInfoController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
 
     }
 
@@ -53,29 +54,29 @@ public class DialogInfoController : MonoBehaviour
         {
             title.text = name;
         }
-        
+
         GeoCoordinate target = new GeoCoordinate(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
         double dis = GlobalAR.currentlocation.GetDistanceTo(target);
-        if (feature.properties.info_type == GlobalAR.kInfo) 
-        { 
-            if(feature.properties.pic_type  == GlobalAR.kPhoto)
+        if (feature.properties.info_type == GlobalAR.kInfo)
+        {
+            if (feature.properties.pic_type == GlobalAR.kPhoto)
             {
-                if(feature.properties.photo != null)
+                if (feature.properties.photo != null)
                 {
                     URI = feature.properties.photo;
                     StartCoroutine(StartDowload());
                 }
             }
-            else if(feature.properties.pic_type == GlobalAR.kMovie)
+            else if (feature.properties.pic_type == GlobalAR.kMovie)
             {
                 var texture = Resources.Load<Texture2D>("png/youtube");
                 image.texture = texture;
             }
             else
             {
-                var texture = Resources.Load<Texture2D>("png/"+feature.properties.icon.Replace(".png","").Replace(".jpg",""));
+                var texture = Resources.Load<Texture2D>("png/" + feature.properties.icon.Replace(".png", "").Replace(".jpg", ""));
                 if (texture != null)
-                image.texture = texture;
+                    image.texture = texture;
             }
         }
         else
@@ -83,7 +84,7 @@ public class DialogInfoController : MonoBehaviour
             var texture = Resources.Load<Texture2D>("png/" + feature.properties.icon.Replace(".png", "").Replace(".jpg", ""));
             if (texture == null)
                 texture = Resources.Load<Texture2D>("png/icon_warn3");
-            
+
             image.texture = texture;
             if (feature.properties.range != null)
             {
@@ -95,9 +96,9 @@ public class DialogInfoController : MonoBehaviour
 
             }
         }
-        
 
-        distance.text ="距離： "+ dis.ToString("F0") + "m";
+
+        distance.text = "距離： " + dis.ToString("F0") + "m";
         content.text = feature.properties.description;
         GlobalAR.isShowedDialog = false;
     }
@@ -107,14 +108,59 @@ public class DialogInfoController : MonoBehaviour
         GlobalAR.isViewDialog = false;
         main.SetActive(false);
     }
-    public void openYoutube()
+
+
+    // iOSプラグインの定義
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+    private static extern void _LaunchSafariView(string url);
+#endif
+
+public void openYoutube()
     {
         if (GlobalAR.currentFeature.properties.pic_type == GlobalAR.kMovie && GlobalAR.currentFeature.properties.movie != null)
         {
-            Application.OpenURL(GlobalAR.currentFeature.properties.movie);
+            string rawUrl = GlobalAR.currentFeature.properties.movie;
+            string finalUrl = rawUrl;
+
+            // 1. URLから動画IDを抽出する
+            string videoId = "";
+            if (rawUrl.Contains("youtu.be/"))
+            {
+                videoId = rawUrl.Split(new string[] { "youtu.be/" }, System.StringSplitOptions.None)[1].Split('?')[0];
+            }
+            else if (rawUrl.Contains("v="))
+            {
+                var query = rawUrl.Split(new string[] { "v=" }, System.StringSplitOptions.None)[1];
+                videoId = query.Split('&')[0];
+            }
+            else if (rawUrl.Contains("/embed/"))
+            {
+                videoId = rawUrl.Split(new string[] { "/embed/" }, System.StringSplitOptions.None)[1].Split('?')[0];
+            }
+
+            // 2. IDが取れたら「普通の視聴ページ」のURLを作る
+            if (!string.IsNullOrEmpty(videoId))
+            {
+                finalUrl = "https://www.youtube.com/watch?v=" + videoId;
+            }
+
+            // ▼▼▼ 追加：ブラウザを開く前に、自分のウィンドウを閉じる ▼▼▼
+            close();
+            // ▲▲▲ 追加ここまで ▲▲▲
+
+            Debug.Log("Launching Safari View Controller: " + finalUrl);
+
+#if UNITY_IPHONE && !UNITY_EDITOR
+            // iOS実機
+            _LaunchSafariView(finalUrl);
+#else
+            // エディタなど
+            Application.OpenURL(finalUrl);
+#endif
         }
-       
     }
+
     public string URI = "https://www.musubou.net/musubou-ar/AR_logo.jpg/AR_logo.jpg";
 
     IEnumerator StartDowload()
@@ -131,4 +177,4 @@ public class DialogInfoController : MonoBehaviour
             image.texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
         }
     }
-}
+} // ← クラスの終わりはここ！
