@@ -151,13 +151,14 @@ public void openYoutube()
 
             Debug.Log("Launching Safari View Controller: " + finalUrl);
 
-#if UNITY_IPHONE && !UNITY_EDITOR
-            // iOS実機
+            #if UNITY_IPHONE && !UNITY_EDITOR
+            // iOS実機の場合: 音声をミュートし、コールバック受信準備をしてからSafariを開く
+            SafariCallbackReceiver.MuteAndPrepare();
             _LaunchSafariView(finalUrl);
-#else
-            // エディタなど
+            #else
+            // エディタやAndroidの場合: 標準ブラウザに飛ぶため、アプリ自体がバックグラウンドに回り自動で無音になります
             Application.OpenURL(finalUrl);
-#endif
+            #endif
         }
     }
 
@@ -178,3 +179,32 @@ public void openYoutube()
         }
     }
 } // ← クラスの終わりはここ！
+
+public class SafariCallbackReceiver : MonoBehaviour
+{
+    private static float previousVolume = 1f;
+
+    // ミュートを実行し、通知を受け取るオブジェクトをシーンに準備する
+    public static void MuteAndPrepare()
+    {
+        // 現在の音量を記憶してミュート
+        previousVolume = AudioListener.volume;
+        AudioListener.volume = 0f; 
+
+        // 受信用の隠しゲームオブジェクトを生成（既に存在していれば作らない）
+        if (GameObject.Find("SafariCallbackReceiver") == null)
+        {
+            GameObject go = new GameObject("SafariCallbackReceiver");
+            go.AddComponent<SafariCallbackReceiver>();
+            DontDestroyOnLoad(go); // シーンが切り替わっても破棄されないようにする
+        }
+    }
+
+    // iOS側(SafariLauncher.mm)からSafariが閉じられた時に呼ばれるメソッド
+    public void OnSafariClosed(string message)
+    {
+        Debug.Log("Safari View Controller closed. Restoring audio.");
+        // 音量をミュート前の状態に戻す
+        AudioListener.volume = previousVolume;
+    }
+}
