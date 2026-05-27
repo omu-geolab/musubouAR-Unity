@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Networking;
 using System.Device.Location;
+using System.Runtime.InteropServices;
+
 public class DialogInfoController : MonoBehaviour
 {
     public Text title;
@@ -107,30 +109,51 @@ public class DialogInfoController : MonoBehaviour
         GlobalAR.isViewDialog = false;
         main.SetActive(false);
     }
-    public void openYoutube()
+    #if UNITY_IPHONE
+[DllImport("__Internal")]
+private static extern void _LaunchSafariView(string url);
+#endif
+
+public void openYoutube()
+{
+    if (GlobalAR.currentFeature.properties.pic_type == GlobalAR.kMovie &&
+        GlobalAR.currentFeature.properties.movie != null)
     {
-        if (GlobalAR.currentFeature.properties.pic_type == GlobalAR.kMovie &&
-                GlobalAR.currentFeature.properties.movie != null)
-        {
-            // Try to find existing SimpleYoutubePlayer
-            SimpleYoutubePlayer youtubePlayer = FindObjectOfType<SimpleYoutubePlayer>();
+        string rawUrl = GlobalAR.currentFeature.properties.movie;
+        string finalUrl = rawUrl;
 
-            // If not found, create one
-            if (youtubePlayer == null)
-            {
-                GameObject youtubePlayerObj = new GameObject("SimpleYoutubePlayer");
-                youtubePlayer = youtubePlayerObj.AddComponent<SimpleYoutubePlayer>();
-            }
-
-            // Open YouTube dialog with the movie URL
-            youtubePlayer.OpenYouTubeDialog(GlobalAR.currentFeature.properties.movie);
-        }
-        else
+        string videoId = "";
+        if (rawUrl.Contains("youtu.be/"))
         {
-            // Fallback if properties are not properly set
-            Debug.LogWarning("YouTube video URL not found or type is not movie");
+            videoId = rawUrl.Split(new string[] { "youtu.be/" }, System.StringSplitOptions.None)[1].Split('?')[0];
         }
+        else if (rawUrl.Contains("v="))
+        {
+            var query = rawUrl.Split(new string[] { "v=" }, System.StringSplitOptions.None)[1];
+            videoId = query.Split('&')[0];
+        }
+        else if (rawUrl.Contains("/embed/"))
+        {
+            videoId = rawUrl.Split(new string[] { "/embed/" }, System.StringSplitOptions.None)[1].Split('?')[0];
+        }
+
+        if (!string.IsNullOrEmpty(videoId))
+        {
+            finalUrl = "https://www.youtube.com/watch?v=" + videoId;
+        }
+
+        close();
+
+        Debug.Log("Launching Safari View Controller: " + finalUrl);
+
+#if UNITY_IPHONE && !UNITY_EDITOR
+        SafariCallbackReceiver.MuteAndPrepare();
+        _LaunchSafariView(finalUrl);
+#else
+        Application.OpenURL(finalUrl);
+#endif
     }
+}
     public string URI = "https://www.musubou.net/musubou-ar/AR_logo.jpg/AR_logo.jpg";
 
     IEnumerator StartDowload()
@@ -146,5 +169,29 @@ public class DialogInfoController : MonoBehaviour
         {
             image.texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
         }
+    }
+}
+
+public class SafariCallbackReceiver : MonoBehaviour
+{
+    private static float previousVolume = 1f;
+
+    public static void MuteAndPrepare()
+    {
+        previousVolume = AudioListener.volume;
+        AudioListener.volume = 0f;
+
+        if (GameObject.Find("SafariCallbackReceiver") == null)
+        {
+            GameObject go = new GameObject("SafariCallbackReceiver");
+            go.AddComponent<SafariCallbackReceiver>();
+            DontDestroyOnLoad(go);
+        }
+    }
+
+    public void OnSafariClosed(string message)
+    {
+        Debug.Log("Safari View Controller closed. Restoring audio.");
+        AudioListener.volume = previousVolume;
     }
 }
