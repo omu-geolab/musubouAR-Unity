@@ -7,7 +7,6 @@ public class GeoTool
     {
         double distance = currentCoordinate.GetDistanceTo(targetCoordinate); // ????????????
         double bearing = CalculateBearing(currentCoordinate, targetCoordinate); // ?????????????
-
         // tan(90)
         if (Mathf.Approximately(currentHeading, (float)bearing))
         {
@@ -34,7 +33,6 @@ public class GeoTool
         double distance = currentCoordinate.GetDistanceTo(targetCoordinate) - adjust; // ????????????
         double bearing = CalculateBearing(currentCoordinate, targetCoordinate); // ?????????????
         float currentHeading = GlobalAR.heading;
-
         // tan(90)
         if (Mathf.Approximately(currentHeading, (float)bearing))
         {
@@ -61,7 +59,6 @@ public class GeoTool
         double distance = currentCoordinate.GetDistanceTo(targetCoordinate);
         double bearing = CalculateBearing(currentCoordinate, targetCoordinate); // ?????????????
         float currentHeading = GlobalAR.heading;
-
         double angleInRadian = ToRadian(bearing); // ??????????????
         return new Vector3(
             (float)(Math.Sin(angleInRadian) * distance + adjust.x),
@@ -69,7 +66,6 @@ public class GeoTool
             (float)(Math.Cos(angleInRadian) * distance + +adjust.z)
         );
     }
-
     // https://www.movable-type.co.uk/scripts/latlong.html
     public static double CalculateBearing(GeoCoordinate origin, GeoCoordinate target)
     {
@@ -77,20 +73,16 @@ public class GeoTool
         double theta2 = ToRadian(target.Latitude);
         double lamda1 = ToRadian(origin.Longitude);
         double lamda2 = ToRadian(target.Longitude);
-
         double y = Math.Sin(lamda2 - lamda1) * Math.Cos(theta2);
         double x = Math.Cos(theta1) * Math.Sin(theta2) - Math.Sin(theta1) * Math.Cos(theta2) * Math.Cos(lamda2 - lamda1);
         double theta = Math.Atan2(y, x);
         double bearing = (ToDegree(theta) + 360) % 360;
-
         return bearing;
     }
-
     public static double ToRadian(double degree)
     {
         return degree * Math.PI / 180;
     }
-
     public static double ToDegree(double radian)
     {
         return radian * 180 / Math.PI;

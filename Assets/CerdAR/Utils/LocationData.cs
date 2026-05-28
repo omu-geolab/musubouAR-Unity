@@ -2,56 +2,178 @@ using System.Collections;
 using UnityEngine;
 using System.Device.Location;
 
-/// <summary>経緯度取得クラス</summary>
+/// <summary>
+/// Location tracking class for AR application
+/// </summary>
 public class LocationData : MonoBehaviour
 {
-    /// <summary>経緯度取得間隔（秒）</summary>
-    private const float IntervalSeconds = 1.0f;
+    /// <summary>GPS update interval in seconds</summary>
+    private const float GPS_INTERVAL = 0.5f;
 
-    /// <summary>ロケーションサービスのステータス</summary>
+    /// <summary>Heading update interval in seconds</summary>
+    private const float HEADING_INTERVAL = 0.1f; // Update heading more frequently
+
+    /// <summary>Minimum distance change threshold (meters)</summary>
+    private const float MIN_DISTANCE_CHANGE = 0.5f;
+
+    /// <summary>Location service status</summary>
     private LocationServiceStatus locationServiceStatus;
 
-    /// <summary>経度</summary>
-    public double Longitude { get; private set; }
+    /// <summary>Smoothing factor for heading (0-1)</summary>
+    [Range(0.1f, 1.0f)]
+    public float headingSmoothingFactor = 0.3f;
 
-    /// <summary>緯度</summary>
-    public double Latitude { get; private set; }
+    /// <summary>Previous heading value for smoothing</summary>
+    private float previousHeading = 0f;
 
-    /// <summary>緯度経度情報が取得可能か</summary>
-    /// <returns>可能ならtrue、不可能ならfalse</returns>
-    public bool CanGetLonLat()
+    /// <summary>Debug mode to log location updates</summary>
+    public bool debugMode = false;
+
+    /// <summary>Start coroutines when component initializes</summary>
+    void Start()
     {
-        return Input.location.isEnabledByUser;
+        // Start GPS updates with slightly delayed initialization
+        StartCoroutine(InitLocationServices());
     }
 
-    /// <summary>経緯度取得処理</summary>
-    /// <returns>一定期間毎に非同期実行するための戻り値</returns>
-    void  Start()
+    /// <summary>Initialize location services with proper permission checking</summary>
+    private IEnumerator InitLocationServices()
     {
-        InvokeRepeating("updateGPS",0.01f, 0.5f);
-    }
-
-    void updateGPS()
-    {
-        locationServiceStatus = Input.location.status;
-        if (Input.location.isEnabledByUser)
+        // Check if user has location service enabled
+        if (!Input.location.isEnabledByUser)
         {
-            switch (locationServiceStatus)
+            Debug.LogWarning("Location services are not enabled by user");
+            yield break;
+        }
+
+        // Start compass
+        Input.compass.enabled = true;
+
+        // Start location service with desired accuracy
+        Input.location.Start(1.0f, MIN_DISTANCE_CHANGE);
+
+        // Wait until service initializes
+        int maxWait = 20; // Maximum seconds to wait
+        while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 0)
+        {
+            yield return new WaitForSeconds(1);
+            maxWait--;
+        }
+
+        // Check if service initialization timed out or failed
+        if (maxWait <= 0)
+        {
+            Debug.LogWarning("Location services initialization timed out");
+            yield break;
+        }
+
+        if (Input.location.status == LocationServiceStatus.Failed)
+        {
+            Debug.LogWarning("Location services failed to initialize");
+            yield break;
+        }
+
+        // Start continuous update coroutines
+        StartCoroutine(UpdateGPSData());
+        StartCoroutine(UpdateHeading());
+
+        if (debugMode)
+            Debug.Log("Location services initialized successfully");
+    }
+
+    /// <summary>Update GPS location data at regular intervals</summary>
+    private IEnumerator UpdateGPSData()
+    {
+        while (true)
+        {
+            if (Input.location.status == LocationServiceStatus.Running)
             {
-                case LocationServiceStatus.Stopped:
-                    Input.compass.enabled = true;
-                    Input.location.Start(1,1);
-                    break;
-                case LocationServiceStatus.Running:
-                    GlobalAR.heading = Input.compass.trueHeading;
-                    GlobalAR.userLat = Input.location.lastData.latitude;
-                    GlobalAR.userLng = Input.location.lastData.longitude;
-                    GlobalAR.currentlocation = new GeoCoordinate(Input.location.lastData.latitude, Input.location.lastData.longitude);
-                    break;
-                default:
-                    break;
+                // Get current location data
+                double currentLat = Input.location.lastData.latitude;
+                double currentLng = Input.location.lastData.longitude;
+                double currentAlt = Input.location.lastData.altitude;
+                float currentAccuracy = Input.location.lastData.horizontalAccuracy;
+
+                // Only update if accuracy is acceptable
+                if (currentAccuracy < 100) // Less than 100 meters accuracy
+                {
+                    // Update Global AR location data
+                    GlobalAR.UpdatePosition(currentLat, currentLng, currentAlt);
+
+                    if (debugMode)
+                    {
+                        Debug.Log($"GPS: Lat: {currentLat}, Lng: {currentLng}, " +
+                                 $"Accuracy: {currentAccuracy}m, Speed: {GlobalAR.moveSpeed}m/s");
+                    }
+                }
+                else if (debugMode)
+                {
+                    Debug.LogWarning($"Low GPS accuracy: {currentAccuracy}m - data not used");
+                }
             }
+
+            // Wait before next update
+            yield return new WaitForSeconds(GPS_INTERVAL);
         }
     }
 
+    /// <summary>Update heading/compass data at regular intervals</summary>
+    private IEnumerator UpdateHeading()
+    {
+        while (true)
+        {
+            if (Input.compass.enabled)
+            {
+                // Get current heading (0-359 degrees, 0 = North, clockwise)
+                float rawHeading = Input.compass.trueHeading;
+
+                // Apply smoothing between previous and new heading
+                float smoothedHeading = ApplyHeadingSmoothing(rawHeading);
+
+                // Update global heading value
+                GlobalAR.UpdateHeading(smoothedHeading);
+
+                // Store current heading as previous for next update
+                previousHeading = smoothedHeading;
+
+                if (debugMode && Time.frameCount % 100 == 0)
+                {
+                    Debug.Log($"Heading: {smoothedHeading}? (Raw: {rawHeading}?)");
+                }
+            }
+
+            // Wait before next update - more frequent than GPS updates
+            yield return new WaitForSeconds(HEADING_INTERVAL);
+        }
+    }
+
+    /// <summary>Apply smoothing to heading values to prevent jittering</summary>
+    private float ApplyHeadingSmoothing(float newHeading)
+    {
+        // If this is the first reading, just use the raw value
+        if (previousHeading == 0f)
+            return newHeading;
+
+        // Handle the case where heading crosses 0/360 boundary
+        float diff = Mathf.Abs(newHeading - previousHeading);
+        if (diff > 180)
+        {
+            // We're crossing the 0/360 boundary
+            if (newHeading > previousHeading)
+                previousHeading += 360;
+            else
+                newHeading += 360;
+        }
+
+        // Apply smoothing factor
+        float smoothedHeading = Mathf.Lerp(previousHeading, newHeading, headingSmoothingFactor);
+
+        // Normalize back to 0-360 range
+        while (smoothedHeading >= 360)
+            smoothedHeading -= 360;
+        while (smoothedHeading < 0)
+            smoothedHeading += 360;
+
+        return smoothedHeading;
+    }
 }
